@@ -1,0 +1,8 @@
+# Используйте официальный образ PostgreSQL
+FROM postgres:latest
+
+# Установите рабочую директорию внутри контейнера
+WORKDIR /docker-entrypoint-initdb.d
+
+# Копируйте ваш файл ddl внутрь контейнера
+COPY abc.sql /docker-entrypoint-initdb.d

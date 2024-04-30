@@ -1,8 +1,8 @@
 services:
   db:
-    image: postgres
-    volumes:
-      - ./tmp/db:/var/lib/postgresql/data
+    build:
+      context: .
+      dockerfile: DockerfileF
     environment:
       POSTGRES_PASSWORD: password
   web:
