@@ -18,27 +18,15 @@ class AccessesController < ApplicationController
   end
 
   def create
-    groups = Group.where(id: params[:groupIds])
-    access_type = AccessType.find_by(slug: params[:type].downcase)
-    access = Access.new(
+    access = Access::CreateService.new(
+      access_type: access_type,
       author: @current_user,
       data: params[:data],
-      groups: groups,
-      size: params[:size],
-      access_type: access_type
-    )
+      group_ids: params[:groupsIds],
+      size: params[:size]
+    ).call
 
-    if access.save
-      groups.each do |group|
-        group.users.each do |user|
-          EmailPublisher.new(
-            email: user.email,
-            action: 'delete_from_group',
-            data: { 'access': access.data['serviceName'], 'group': group.name}
-          ).call
-        end
-      end
-
+    if access
       render json: AccessBlueprint.render_as_json(access, { current_user: @current_user })
     else
       render json: { error: access.errors }, status: :unprocessable_entity
@@ -48,11 +36,10 @@ class AccessesController < ApplicationController
   def update
     access = Access.find(params[:id])
     groups = Group.where(id: params[:groupIds])
-    access_type = AccessType.find_by(slug: params[:type].downcase)
 
     if params[:data][:password]
       rsa_private_key = OpenSSL::PKey::RSA.new(@current_user.priv_key)
-      password = rsa_private_key .private_decrypt(Base64.decode64(params[:data][:password]))
+      password = rsa_private_key.private_decrypt(Base64.decode64(params[:data][:password]))
       access.data = params[:data]
       access.data['password'] = password
     else
@@ -68,5 +55,11 @@ class AccessesController < ApplicationController
     else
       render json: { error: access.errors }, status: :unprocessable_entity
     end
+  end
+
+  private
+
+  def access_type
+    @access_type ||= AccessType.find_by(slug: params[:type].downcase)
   end
 end
